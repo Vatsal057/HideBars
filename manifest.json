@@ -1,0 +1,10 @@
+{
+	"id": "hidebars",
+	"name": "HideBars",
+	"version": "1.0.0",
+	"minAppVersion": "1.0.0",
+	"description": "Automatically hides sidebars in fullscreen or narrow windows and reveals them when hovering on the edges.",
+	"author": "Vatsal",
+	"authorUrl": "https://github.com/Vatsal057",
+	"isDesktopOnly": true
+}
