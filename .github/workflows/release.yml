@@ -1,0 +1,77 @@
+name: Release
+
+# Obsidian's community-plugin flow expects a GitHub release whose tag exactly
+# matches the "version" in manifest.json, with main.js, manifest.json and
+# styles.css attached as individual top-level assets — not zipped. The store
+# fetches those files by name, so the shape of this release matters.
+#
+# Tag WITHOUT a leading v, per Obsidian convention:
+#   git tag 1.0.0 && git push origin 1.0.0
+on:
+  push:
+    tags:
+      - '*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run the tests
+        run: |
+          # No build step: this plugin is plain JS loaded as-is by Obsidian.
+          if [ -f test_main.js ]; then node test_main.js; fi
+
+      - name: Check the tag matches manifest.json
+        if: github.event_name == 'push'
+        run: |
+          MANIFEST_VERSION="$(node -p "require('./manifest.json').version")"
+          echo "tag=$GITHUB_REF_NAME  manifest=$MANIFEST_VERSION"
+          if [ "$GITHUB_REF_NAME" != "$MANIFEST_VERSION" ]; then
+            echo "::error::Tag '$GITHUB_REF_NAME' does not match manifest.json version '$MANIFEST_VERSION'." \
+                 "Obsidian resolves releases by that version, so a mismatch makes the plugin uninstallable."
+            exit 1
+          fi
+
+      - name: Verify the required files exist
+        run: |
+          test -f main.js
+          test -f manifest.json
+          test -f styles.css
+
+      - uses: softprops/action-gh-release@v2
+        if: github.event_name == 'push'
+        with:
+          files: |
+            main.js
+            manifest.json
+            styles.css
+          name: HideBars ${{ github.ref_name }}
+          generate_release_notes: true
+          body: |
+            ## Manual install
+
+            Copy `main.js`, `manifest.json` and `styles.css` into:
+
+            ```
+            <your vault>/.obsidian/plugins/hidebars/
+            ```
+
+            Then enable **HideBars** in **Settings → Community plugins**.
+            Reload Obsidian if it doesn't appear.
+
+            ## What it does
+
+            Auto-collapses both sidebars in fullscreen or when the window is
+            narrower than a threshold, and reveals one when you hover that edge.
+            Leaving fullscreen restores the sidebar states you had before.
+            Desktop only — it depends on Obsidian's workspace layout API.
